@@ -122,7 +122,10 @@ function OwnerChat() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conversationId, message: text })
       })
-      if (!response.ok || !response.body) throw new Error(`Hermes request failed (${response.status})`)
+      if (!response.ok || !response.body) {
+        const failure = await response.json().catch(() => null)
+        throw new Error(typeof failure?.error === 'string' ? failure.error : `Hermes request failed (${response.status})`)
+      }
       setStatus('streaming')
       await readHermesStream(response.body, delta => setMessages(previous =>
         previous.map(m => m.id === assistantId ? {

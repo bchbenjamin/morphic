@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 
 import { checkOwnerSession, OWNER_COOKIE } from '@/lib/hermes/owner-session'
 import { buildHermesRequest } from '@/lib/hermes/relay'
+import { hermesUpstreamFailure } from '@/lib/hermes/upstream-error'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -46,8 +47,13 @@ export async function POST(req: Request) {
       !result.body ||
       !result.headers.get('content-type')?.includes('text/event-stream')
     ) {
-      await result.body?.cancel()
-      return new Response('Hermes request failed', { status: 502 })
+      console.warn('[hermes-chat] upstream response rejected', {
+        status: result.status,
+        eventStream: Boolean(result.headers.get('content-type')?.includes('text/event-stream'))
+      })
+      await result.body?.cancel().catch(() => {})
+      const failure = hermesUpstreamFailure(result.status)
+      return Response.json({ error: failure.error }, { status: failure.status, headers: { 'Cache-Control': 'no-store' } })
     }
     return new Response(result.body, {
       headers: {
@@ -60,6 +66,12 @@ export async function POST(req: Request) {
   } catch (error) {
     if (error instanceof Error && error.message === 'Invalid request')
       return new Response('Invalid request', { status: 400 })
-    return new Response('Hermes unavailable', { status: 502 })
+    const configurationError = error instanceof Error && ['Invalid Hermes configuration', 'Invalid Hermes API path', 'Invalid URL'].includes(error.message)
+    console.warn('[hermes-chat] upstream request failed', {
+      kind: configurationError ? 'configuration' : req.signal.aborted ? 'aborted' : 'transport'
+    })
+    return Response.json({
+      error: configurationError ? 'Hermes backend configuration is incomplete or invalid.' : 'Hermes transport failed before a response arrived.'
+    }, { status: 502, headers: { 'Cache-Control': 'no-store' } })
   }
 }
