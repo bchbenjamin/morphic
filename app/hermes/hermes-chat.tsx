@@ -11,6 +11,7 @@ type Message = { role: 'user' | 'assistant'; text: string }
 export function HermesChat() {
   const conversation = useRef<string | null>(null)
   const inFlight = useRef(false)
+  const activeRequest = useRef<AbortController | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
@@ -18,6 +19,8 @@ export function HermesChat() {
   async function send() {
     if (inFlight.current || !input.trim()) return
     inFlight.current = true
+    const controller = new AbortController()
+    activeRequest.current = controller
     setBusy(true)
     setError('')
     const message = input.trim()
@@ -31,6 +34,7 @@ export function HermesChat() {
     try {
       const response = await fetch('/api/hermes/chat', {
         method: 'POST',
+        signal: controller.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conversationId: conversation.current, message })
       })
@@ -46,10 +50,12 @@ export function HermesChat() {
         )
       )
     } catch (err) {
-      setError(
-        `${err instanceof Error ? err.message : 'Request failed'}. Check Hermes before retrying an action.`
+      setError(controller.signal.aborted
+        ? 'Response stream disconnected. The backend operation may still be running; check Hermes before retrying.'
+        : `${err instanceof Error ? err.message : 'Request failed'}. Check Hermes before retrying an action.`
       )
     } finally {
+      activeRequest.current = null
       inFlight.current = false
       setBusy(false)
     }
@@ -132,6 +138,7 @@ export function HermesChat() {
           rows={3}
           className="w-full resize-y bg-transparent outline-none"
         />
+        {busy && <button type="button" className="self-end rounded-md border px-4 py-2" onClick={() => activeRequest.current?.abort()}>Disconnect response</button>}
         <button
           disabled={busy || !input.trim()}
           type="submit"

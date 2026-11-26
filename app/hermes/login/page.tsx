@@ -1,11 +1,17 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 export default function OwnerLogin() {
   const [method, setMethod] = useState('totp'),
     [email, setEmail] = useState(''),
     [credential, setCredential] = useState(''),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false)
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('error') === 'google') {
+      setError('Google sign-in failed or this account is not authorized. Try again or use another login method.')
+      window.history.replaceState(null, '', '/hermes/login')
+    }
+  }, [])
   return (
     <main className="mx-auto w-full max-w-sm p-6 pt-24">
       <h1 className="text-3xl font-semibold">Hermes</h1>
@@ -65,6 +71,7 @@ export default function OwnerLogin() {
             className="border rounded p-3"
             aria-label="Email"
             type="email"
+            autoComplete="username"
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
@@ -80,7 +87,9 @@ export default function OwnerLogin() {
           }
           placeholder={method === 'totp' ? '6-digit code' : 'Password'}
           value={credential}
-          onChange={e => setCredential(e.target.value)}
+          maxLength={method === 'totp' ? 6 : 1024}
+          pattern={method === 'totp' ? '[0-9]{6}' : undefined}
+          onChange={e => setCredential(method === 'totp' ? e.target.value.replace(/[^0-9]/g, '') : e.target.value)}
           required
         />
         {error && (

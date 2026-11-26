@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 type Session = {
   id: string
   source?: string
@@ -14,8 +14,17 @@ export function History() {
     [error, setError] = useState(''),
     [open, setOpen] = useState(false),
     [more, setMore] = useState(false),
-    [offset, setOffset] = useState(0)
+    [offset, setOffset] = useState(0),
+    [messageOffset, setMessageOffset] = useState(0),
+    [messageMore, setMessageMore] = useState(false),
+    [messageBusy, setMessageBusy] = useState(false),
+    [listBusy, setListBusy] = useState(false)
+  const listVersion = useRef(0)
+  const transcriptVersion = useRef(0)
+  const transcriptAbort = useRef<AbortController | null>(null)
   async function load(next = 0) {
+    const version = ++listVersion.current
+    setListBusy(true)
     setError('')
     try {
       const r = await fetch(`/api/hermes/history?offset=${next}`)
@@ -23,26 +32,43 @@ export function History() {
       const d = await r.json()
       const rows = Array.isArray(d) ? d : d.sessions
       if (!Array.isArray(rows)) throw Error('Unexpected history format')
-      setSessions(old => (next ? [...old, ...rows] : rows))
+      if (version !== listVersion.current) return
+      setSessions(old => (next ? [...old, ...rows.filter((r: Session) => !old.some(s => s.id === r.id))] : rows))
       setOffset(next + rows.length)
       setMore(Boolean(d.has_more))
     } catch (e) {
-      setError(String(e))
+      if (version === listVersion.current) setError(String(e))
+    } finally {
+      if (version === listVersion.current) setListBusy(false)
     }
   }
-  async function view(id: string) {
+  async function view(id: string, next = 0) {
+    const version = ++transcriptVersion.current
+    transcriptAbort.current?.abort()
+    const controller = new AbortController()
+    transcriptAbort.current = controller
     setSelected(id)
-    setMessages([])
+    setMessageBusy(true)
+    if (!next) {
+      setMessages([])
+      setMessageOffset(0)
+      setMessageMore(false)
+    }
     setError('')
     try {
-      const r = await fetch(`/api/hermes/history?id=${encodeURIComponent(id)}`)
+      const r = await fetch(`/api/hermes/history?id=${encodeURIComponent(id)}&offset=${next}`, { signal: controller.signal })
       if (!r.ok) throw Error('Transcript unavailable')
       const d = await r.json()
       const rows = Array.isArray(d) ? d : d.messages
       if (!Array.isArray(rows)) throw Error('Unexpected transcript format')
-      setMessages(rows)
+      if (version !== transcriptVersion.current) return
+      setMessages(old => next ? [...old, ...rows] : rows)
+      setMessageOffset(next + rows.length)
+      setMessageMore(Boolean(d.has_more))
     } catch (e) {
-      setError(String(e))
+      if (version === transcriptVersion.current && !controller.signal.aborted) setError(String(e))
+    } finally {
+      if (version === transcriptVersion.current) setMessageBusy(false)
     }
   }
   return (
@@ -74,7 +100,7 @@ export function History() {
               </span>
             </button>
           ))}
-          {more && <button onClick={() => void load(offset)}>Load more</button>}
+          {more && <button disabled={listBusy} onClick={() => void load(offset)}>Load more conversations</button>}
           {error && <p role="alert">{error}</p>}
           {selected && (
             <div className="max-h-96 overflow-auto border-t pt-2 space-y-3">
@@ -90,6 +116,8 @@ export function History() {
                   </pre>
                 </article>
               ))}
+              {messageBusy && <p role="status">Loading transcript…</p>}
+              {messageMore && <button disabled={messageBusy} onClick={() => void view(selected, messageOffset)}>Load more messages</button>}
             </div>
           )}
         </div>
