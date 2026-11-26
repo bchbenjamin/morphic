@@ -1,0 +1,9 @@
+# Private Hermes mode
+
+Morphic's ordinary research mode creates its own prompts, tools and follow-up inference. For a personal agent, the dedicated `/hermes` page instead relays text turns to the Hermes OpenAI-compatible API. Hermes controls model selection, memory, tools and permissions; the inference-only gateway is not configured as the Morphic backend. No browser receives the downstream key.
+
+Set `HERMES_CHAT_ENABLED=true`, `HERMES_OWNER_USER_ID` to the immutable ID of the authenticated owner (not email), `HERMES_WEB_ORIGIN` to the exact public origin with no trailing slash, `HERMES_API_BASE_URL` to the trusted Hermes `/v1` URL, and `HERMES_API_KEY` to the separate downstream key. Optional `HERMES_API_MODEL` defaults to `hermes`. Use Better Auth with invite-only signup or another existing real auth provider. Anonymous mode and non-owner accounts are denied. Keep sharing disabled and third-party analytics/tracing off. Do not use an inference key or node/admin token here. Root redirects to the Hermes page when enabled.
+
+Use loopback HTTP only when co-hosted, otherwise HTTPS through an authenticated, authorized ingress. The Pi's existing listener is `127.0.0.1:8642`; a cloud deployment cannot connect to its own loopback and needs secure ingress first. Do not open the Pi port directly. Keep the API key server-only and use a dedicated deployment. No gateway credentials should be configured in this deployment.
+
+The first implementation supports streamed text and isolated server-derived conversation IDs per tab. Hermes owns the transcript; the page does not yet browse past sessions, display detailed tool progress/approval UI, render rich research artifacts, or upload files. Reload starts a new visible conversation. A failed stream may have already executed actions; do not auto-retry. Verify actual session continuity and tool calls against the deployed Hermes version before production use.
