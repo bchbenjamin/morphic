@@ -69,6 +69,16 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  if (process.env.HERMES_CHAT_ENABLED === 'true')
+    return (
+      <html lang="en" suppressHydrationWarning>
+        <body className="min-h-svh font-sans">
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            {children}
+          </ThemeProvider>
+        </body>
+      </html>
+    )
   const user = await getCurrentUser()
   // Sharing is opt-in for Better Auth (ENABLE_SHARE=true); the flag is
   // folded into the capabilities on the server so a prebuilt image can

@@ -1,10 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/lib/auth/get-current-user', () => ({ getCurrentUser: vi.fn() }))
-vi.mock('@/lib/auth/provider', () => ({ isAnonymousMode: vi.fn() }))
-
-import { getCurrentUser } from '@/lib/auth/get-current-user'
-import { isAnonymousMode } from '@/lib/auth/provider'
+vi.mock('next/headers', () => ({
+  cookies: async () => ({ get: () => ({ value: 'fixture' }) })
+}))
+vi.mock('@/lib/hermes/owner-session', () => ({
+  checkOwnerSession: vi.fn(),
+  OWNER_COOKIE: '__Host-hermes-session'
+}))
+import { checkOwnerSession } from '@/lib/hermes/owner-session'
 
 import { POST } from './route'
 
@@ -27,8 +30,7 @@ beforeEach(() => {
   vi.stubEnv('HERMES_WEB_ORIGIN', origin)
   vi.stubEnv('HERMES_API_BASE_URL', 'http://127.0.0.1:8642/v1')
   vi.stubEnv('HERMES_API_KEY', 'fixture')
-  vi.mocked(isAnonymousMode).mockReturnValue(false)
-  vi.mocked(getCurrentUser).mockResolvedValue({ id: 'owner', email: null })
+  vi.mocked(checkOwnerSession).mockResolvedValue(true)
 })
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -40,14 +42,9 @@ describe('Hermes API route', () => {
   it('rejects anonymous, guest, other owner, and cross-origin requests without contacting upstream', async () => {
     const upstream = vi.fn()
     vi.stubGlobal('fetch', upstream)
-    vi.mocked(isAnonymousMode).mockReturnValue(true)
+    vi.mocked(checkOwnerSession).mockResolvedValue(false)
     expect((await POST(request())).status).toBe(403)
-    vi.mocked(isAnonymousMode).mockReturnValue(false)
-    vi.mocked(getCurrentUser).mockResolvedValue(null)
-    expect((await POST(request())).status).toBe(403)
-    vi.mocked(getCurrentUser).mockResolvedValue({ id: 'other', email: null })
-    expect((await POST(request())).status).toBe(403)
-    vi.mocked(getCurrentUser).mockResolvedValue({ id: 'owner', email: null })
+    vi.mocked(checkOwnerSession).mockResolvedValue(true)
     expect((await POST(request(payload, 'https://wrong.test'))).status).toBe(
       403
     )
@@ -56,16 +53,14 @@ describe('Hermes API route', () => {
   it('relays an authenticated SSE response without exposing upstream headers', async () => {
     const body =
       'data: {"choices":[{"delta":{"content":"raspberrypi"}}]}\n\ndata: [DONE]\n\n'
-    const upstream = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(body, {
-          headers: {
-            'content-type': 'text/event-stream',
-            'set-cookie': 'sensitive=1'
-          }
-        })
-      )
+    const upstream = vi.fn().mockResolvedValue(
+      new Response(body, {
+        headers: {
+          'content-type': 'text/event-stream',
+          'set-cookie': 'sensitive=1'
+        }
+      })
+    )
     vi.stubGlobal('fetch', upstream)
     const response = await POST(request())
     expect(response.status).toBe(200)

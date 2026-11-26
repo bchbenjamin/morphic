@@ -33,6 +33,21 @@ function relayRewrite(request: NextRequest): NextResponse | null {
 }
 
 export async function proxy(request: NextRequest) {
+  if (process.env.HERMES_CHAT_ENABLED === 'true') {
+    const path = request.nextUrl.pathname
+    if (
+      path === '/' ||
+      path === '/hermes' ||
+      path === '/hermes/login' ||
+      path === '/api/hermes/auth' ||
+      path === '/api/hermes/chat' ||
+      path === '/api/hermes/history'
+    )
+      return NextResponse.next()
+    if (path === '/auth/login')
+      return NextResponse.redirect(new URL('/hermes/login', request.url))
+    return new NextResponse('Not found', { status: 404 })
+  }
   if (isMaintenanceMode()) {
     return maintenanceResponse(request.nextUrl.pathname)
   }

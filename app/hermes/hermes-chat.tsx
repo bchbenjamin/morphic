@@ -4,6 +4,8 @@ import { useRef, useState } from 'react'
 
 import { readHermesStream } from '@/lib/hermes/sse'
 
+import { History } from './history'
+
 type Message = { role: 'user' | 'assistant'; text: string }
 
 export function HermesChat() {
@@ -73,7 +75,23 @@ export function HermesChat() {
         >
           New chat
         </button>
+        <button
+          type="button"
+          className="rounded-md border px-3 py-2"
+          onClick={async () => {
+            const r = await fetch('/api/hermes/auth', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ method: 'logout' })
+            })
+            if (r.ok) window.location.replace('/hermes/login')
+            else setError('Logout failed; retry.')
+          }}
+        >
+          Sign out
+        </button>
       </header>
+      <History />
       <div className="flex min-h-40 flex-col gap-5" aria-live="polite">
         {messages.map((message, i) => (
           <article

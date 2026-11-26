@@ -1,6 +1,7 @@
-import { getCurrentUser } from '@/lib/auth/get-current-user'
-import { isAnonymousMode } from '@/lib/auth/provider'
-import { buildHermesRequest, isHermesOwner } from '@/lib/hermes/relay'
+import { cookies } from 'next/headers'
+
+import { checkOwnerSession, OWNER_COOKIE } from '@/lib/hermes/owner-session'
+import { buildHermesRequest } from '@/lib/hermes/relay'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -8,10 +9,11 @@ export const maxDuration = 300
 export async function POST(req: Request) {
   if (process.env.HERMES_CHAT_ENABLED !== 'true')
     return new Response('Not found', { status: 404 })
-  const anonymous = isAnonymousMode()
-  const user = anonymous ? null : await getCurrentUser()
-  if (!isHermesOwner(user?.id, anonymous) || !user)
-    return new Response('Forbidden', { status: 403 })
+  const ownerId = process.env.HERMES_OWNER_USER_ID
+  const valid = await checkOwnerSession(
+    (await cookies()).get(OWNER_COOKIE)?.value
+  ).catch(() => false)
+  if (!ownerId || !valid) return new Response('Forbidden', { status: 403 })
   // Do not trust client-supplied forwarded host headers for CSRF protection.
   if (
     !process.env.HERMES_WEB_ORIGIN ||
@@ -30,7 +32,7 @@ export async function POST(req: Request) {
     return new Response('Invalid request', { status: 400 })
   }
   try {
-    const upstream = buildHermesRequest(input, user.id)
+    const upstream = buildHermesRequest(input, ownerId)
     const result = await fetch(upstream.url, {
       method: 'POST',
       headers: upstream.headers,
