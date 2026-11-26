@@ -10,6 +10,12 @@ export default function OwnerLogin() {
     <main className="mx-auto w-full max-w-sm p-6 pt-24">
       <h1 className="text-3xl font-semibold">Hermes</h1>
       <p className="mb-6 text-muted-foreground">Private owner access</p>
+      <a
+        className="block rounded border p-3 mb-4 text-center"
+        href="/api/hermes/google"
+      >
+        Continue with Google
+      </a>
       <div className="flex gap-3 mb-4">
         <button
           className="border rounded p-2"

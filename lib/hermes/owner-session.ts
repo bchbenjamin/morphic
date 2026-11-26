@@ -72,3 +72,17 @@ export async function authenticateOwner(
     return token
   })
 }
+
+export async function createGoogleOwnerSession(subject: string) {
+  if (
+    !process.env.HERMES_OWNER_USER_ID ||
+    !(process.env.HERMES_GOOGLE_ALLOWED_SUBJECTS || '')
+      .split(/[\s,]+/)
+      .filter(Boolean)
+      .includes(subject)
+  )
+    return null
+  const token = randomBytes(32).toString('hex')
+  await db()`insert into hermes_owner_sessions(token_hash,expires_at) values (${digest(token)},now()+interval '12 hours')`
+  return token
+}

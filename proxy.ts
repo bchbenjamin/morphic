@@ -41,7 +41,9 @@ export async function proxy(request: NextRequest) {
       path === '/hermes/login' ||
       path === '/api/hermes/auth' ||
       path === '/api/hermes/chat' ||
-      path === '/api/hermes/history'
+      path === '/api/hermes/history' ||
+      path === '/api/hermes/google' ||
+      path === '/api/hermes/google/callback'
     )
       return NextResponse.next()
     if (path === '/auth/login')
