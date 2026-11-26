@@ -37,12 +37,12 @@ const fontSans = FontSans({
   variable: '--font-sans'
 })
 
-const title = 'Morphic'
+const title = 'Hermes'
 const description =
-  'A fully open-source AI-powered answer engine with a generative UI.'
+  'Private personal AI, connected to your own devices and context.'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://morphic.sh'),
+  metadataBase: new URL('https://hermes.bchbenjamin.in'),
   title,
   description,
   openGraph: {
@@ -52,8 +52,7 @@ export const metadata: Metadata = {
   twitter: {
     title,
     description,
-    card: 'summary_large_image',
-    creator: '@miiura'
+    card: 'summary_large_image'
   }
 }
 

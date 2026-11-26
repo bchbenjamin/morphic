@@ -125,7 +125,7 @@ function SpaceSettingsView() {
           <div className="flex w-full flex-col gap-3">
             <h2 className="text-2xl font-semibold">Default</h2>
             <p className="text-sm text-muted-foreground">
-              Morphic&apos;s standard behavior. Add instructions only if you
+              Hermes&apos;s standard behavior. Add instructions only if you
               want them in every chat.
             </p>
             <button
@@ -176,7 +176,7 @@ function SpaceSettingsView() {
             </label>
             <label className="flex flex-col gap-2">
               <span className="text-sm font-medium">
-                How should Morphic write?
+                How should Hermes write?
               </span>
               <Textarea
                 value={fields.style}

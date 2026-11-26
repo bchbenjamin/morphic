@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 
 import { checkOwnerSession, OWNER_COOKIE } from '@/lib/hermes/owner-session'
+import { hermesUpstreamUrl } from '@/lib/hermes/relay'
 export const runtime = 'nodejs'
 export async function GET(req: Request) {
   if (process.env.HERMES_CHAT_ENABLED !== 'true')
@@ -19,27 +20,10 @@ export async function GET(req: Request) {
   if (!/^\d{1,7}$/.test(offset))
     return new Response('Invalid offset', { status: 400 })
   try {
-    const base = new URL(process.env.HERMES_API_BASE_URL || '')
-    if (
-      base.protocol !== 'https:' &&
-      !(
-        base.protocol === 'http:' &&
-        ['localhost', '127.0.0.1', '[::1]'].includes(base.hostname)
-      )
-    )
-      throw new Error('Invalid origin')
-    if (
-      !process.env.HERMES_API_KEY ||
-      base.username ||
-      base.password ||
-      base.search ||
-      base.hash
-    )
-      throw new Error('Invalid configuration')
     const path = id
       ? `/api/sessions/${encodeURIComponent(id)}/messages?limit=100&order=oldest&offset=${offset}`
       : `/api/sessions?limit=50&offset=${offset}`
-    const upstream = await fetch(new URL(path, base.origin), {
+    const upstream = await fetch(hermesUpstreamUrl(path), {
       headers: { Authorization: `Bearer ${process.env.HERMES_API_KEY}` },
       redirect: 'error',
       cache: 'no-store',

@@ -119,7 +119,7 @@ export function getAuthProvider(): AuthProvider {
   const provider = providerRegistry[name]
   if (!provider) {
     throw new Error(
-      `AUTH_PROVIDER=${name} is not available in this version of Morphic.`
+      `AUTH_PROVIDER=${name} is not available in this version of Hermes.`
     )
   }
   return provider

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildHermesRequest, isHermesOwner } from './relay'
+import { buildHermesRequest, hermesUpstreamUrl, isHermesOwner } from './relay'
 import { readHermesStream } from './sse'
 
 const env = {
@@ -44,6 +44,21 @@ describe('private Hermes relay', () => {
     )
     expect(request.headers['X-Hermes-Session-Id']).not.toBe(
       buildHermesRequest(input, 'other', env).headers['X-Hermes-Session-Id']
+    )
+  })
+  it('preserves the single-service gateway prefix for both chat and history', () => {
+    const gateway = {
+      ...env,
+      HERMES_API_BASE_URL: 'https://ai.bchbenjamin.in/_ingress/http/api/v1'
+    }
+    expect(buildHermesRequest(input, 'owner', gateway).url).toBe(
+      'https://ai.bchbenjamin.in/_ingress/http/api/v1/chat/completions'
+    )
+    expect(hermesUpstreamUrl('/api/sessions?limit=50&offset=0', gateway).href).toBe(
+      'https://ai.bchbenjamin.in/_ingress/http/api/api/sessions?limit=50&offset=0'
+    )
+    expect(hermesUpstreamUrl('/api/sessions', env).href).toBe(
+      'http://127.0.0.1:8642/api/sessions'
     )
   })
   it('rejects unencrypted remote transport, malformed input and missing credentials', () => {

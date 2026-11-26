@@ -1,5 +1,5 @@
 {
-  "name": "morphic",
+  "name": "hermes",
   "version": "1.10.0",
   "private": true,
   "license": "Apache-2.0",
@@ -83,6 +83,7 @@
     "drizzle-orm": "0.45.2",
     "embla-carousel-react": "^8.0.0",
     "exa-js": "^1.0.12",
+    "jose": "^6.2.12",
     "js-tiktoken": "^1.0.20",
     "jsdom": "^26.1.0",
     "katex": "^0.18.2",

@@ -410,14 +410,14 @@ function createAuth() {
   // deliver it to the browser without a hand-written header copy.
 
   return betterAuth({
-    appName: 'Morphic',
+    appName: 'Hermes',
     secret: getSecret(),
     database: drizzleAdapter(db, { provider: 'pg', schema: authSchema }),
     emailAndPassword: {
       enabled: true,
       // better-auth 1.7 removed the built-in nodemailer transport: without
       // this callback, requestPasswordReset fails with RESET_PASSWORD_DISABLED
-      // even when the SMTP variables are present. Morphic does not use email
+      // even when the SMTP variables are present. Hermes does not use email
       // verification, so this is the only email better-auth delivers;
       // invitation mail goes through lib/actions/admin.ts.
       sendResetPassword: smtpConfigured
@@ -440,7 +440,7 @@ function createAuth() {
             const link = `${origin}/auth/update-password?token=${token}`
             await sendSmtpMail({
               to: user.email,
-              subject: 'Reset your Morphic password',
+              subject: 'Reset your Hermes password',
               text: `Use this link to reset your password (valid for one hour): ${link}`,
               html: `<p>Use this link to reset your password (valid for one hour):</p><p><a href="${link}">Reset password</a></p>`
             })

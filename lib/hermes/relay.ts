@@ -14,6 +14,31 @@ export function isHermesOwner(
   )
 }
 
+export function hermesUpstreamUrl(
+  path: string,
+  env = process.env
+) {
+  const base = new URL(env.HERMES_API_BASE_URL ?? '')
+  const loopback = ['127.0.0.1', 'localhost', '[::1]'].includes(base.hostname)
+  if (
+    (base.protocol !== 'https:' && !(base.protocol === 'http:' && loopback)) ||
+    base.username ||
+    base.password ||
+    base.search ||
+    base.hash ||
+    !env.HERMES_API_KEY
+  )
+    throw new Error('Invalid Hermes configuration')
+  const prefix = base.pathname.replace(/\/+$/, '')
+  if (!prefix.endsWith('/v1') || !path.startsWith('/') || path.startsWith('//'))
+    throw new Error('Invalid Hermes API path')
+  const target = new URL(base.origin)
+  target.pathname = prefix.slice(0, -3) + path.split('?')[0]
+  const query = path.indexOf('?')
+  if (query !== -1) target.search = path.slice(query + 1)
+  return target
+}
+
 export function buildHermesRequest(
   input: unknown,
   ownerId: string,
@@ -32,22 +57,12 @@ export function buildHermesRequest(
     message.length > 32000
   )
     throw new Error('Invalid request')
-  const base = new URL(env.HERMES_API_BASE_URL ?? '')
-  const loopback = ['127.0.0.1', 'localhost', '[::1]'].includes(base.hostname)
-  if (
-    (base.protocol !== 'https:' && !(base.protocol === 'http:' && loopback)) ||
-    base.username ||
-    base.password ||
-    base.search ||
-    base.hash ||
-    !env.HERMES_API_KEY
-  )
-    throw new Error('Invalid Hermes configuration')
+  // Keep the legacy stable session namespace so existing conversations survive rebranding.
   const sessionId = `morphic-${createHash('sha256')
     .update(JSON.stringify([ownerId, conversationId]))
     .digest('hex')}`
   return {
-    url: `${base.toString().replace(/\/+$/, '')}/chat/completions`,
+    url: hermesUpstreamUrl('/v1/chat/completions', env).toString(),
     headers: {
       Authorization: `Bearer ${env.HERMES_API_KEY}`,
       'Content-Type': 'application/json',
