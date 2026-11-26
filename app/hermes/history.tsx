@@ -1,5 +1,5 @@
 'use client'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 type Session = {
   id: string
   source?: string
@@ -7,12 +7,12 @@ type Session = {
   last_active?: string
 }
 type Entry = { role?: string; content?: unknown; tool_name?: string }
-export function History() {
+export function History({ embedded = false }: { embedded?: boolean }) {
   const [sessions, setSessions] = useState<Session[]>([]),
     [messages, setMessages] = useState<Entry[]>([]),
     [selected, setSelected] = useState(''),
     [error, setError] = useState(''),
-    [open, setOpen] = useState(false),
+    [open, setOpen] = useState(embedded),
     [more, setMore] = useState(false),
     [offset, setOffset] = useState(0),
     [messageOffset, setMessageOffset] = useState(0),
@@ -71,9 +71,14 @@ export function History() {
       if (version === transcriptVersion.current) setMessageBusy(false)
     }
   }
+  useEffect(() => {
+    if (embedded) void load()
+    // Fetch once when mounted in the original sidebar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embedded])
   return (
-    <section className="rounded-lg border p-3">
-      <button
+    <section className={embedded ? 'space-y-2' : 'rounded-lg border p-3'}>
+      {!embedded && <button
         className="font-medium"
         onClick={() => {
           setOpen(!open)
@@ -81,7 +86,8 @@ export function History() {
         }}
       >
         {open ? 'Hide' : 'Browse'} conversation history
-      </button>
+      </button>}
+      {embedded && <h2 className="px-2 text-xs font-medium text-muted-foreground">Conversation history</h2>}
       {open && (
         <div className="mt-3 space-y-2">
           <p className="text-xs text-muted-foreground">
@@ -91,7 +97,7 @@ export function History() {
           {sessions.map(s => (
             <button
               key={s.id}
-              className="block w-full rounded border p-2 text-left"
+              className="block w-full truncate rounded-md px-2 py-2 text-left text-sm hover:bg-sidebar-accent"
               onClick={() => void view(s.id)}
             >
               {s.title || 'Conversation'}{' '}

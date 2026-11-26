@@ -10,16 +10,21 @@ import { cn } from '@/lib/utils'
 import { useSidebar } from '@/components/ui/sidebar'
 
 import { Button } from './ui/button'
+import { IconLogout, IconSettings } from '@tabler/icons-react'
+import { SidebarTrigger } from './ui/sidebar'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from './ui/dropdown-menu'
+import { ThemeMenuItems } from './theme-menu-items'
 import { FeedbackModal } from './feedback-modal'
-// import { Button } from './ui/button' // No longer needed directly here for Sign In button
 import GuestMenu from './guest-menu' // Import the new GuestMenu component
 import UserMenu from './user-menu'
 
 interface HeaderProps {
   user: AppUser | null
+  hermesOwner?: boolean
+  onSignOut?: () => void
 }
 
-export const Header: React.FC<HeaderProps> = ({ user }) => {
+export const Header: React.FC<HeaderProps> = ({ user, hermesOwner = false, onSignOut }) => {
   const { open } = useSidebar()
   const pathname = usePathname()
   const [feedbackOpen, setFeedbackOpen] = useState(false)
@@ -35,10 +40,10 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
         )}
       >
         {/* This div can be used for a logo or title on the left if needed */}
-        <div></div>
+        <div>{hermesOwner && <SidebarTrigger />}</div>
 
         <div className="flex items-center gap-2">
-          {isRootPage && (
+          {isRootPage && !hermesOwner && (
             <Button
               variant="outline"
               size="sm"
@@ -47,11 +52,27 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
               Feedback
             </Button>
           )}
-          {user ? <UserMenu user={user} /> : <GuestMenu />}
+          {hermesOwner ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-6" aria-label="Settings">
+                  <IconSettings className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Theme</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent><ThemeMenuItems /></DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={onSignOut}><IconLogout className="size-4" /> Sign out</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : user ? <UserMenu user={user} /> : <GuestMenu />}
         </div>
       </header>
 
-      {isRootPage && (
+      {isRootPage && !hermesOwner && (
         <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
       )}
     </>

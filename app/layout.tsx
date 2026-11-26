@@ -71,9 +71,10 @@ export default async function RootLayout({
   if (process.env.HERMES_CHAT_ENABLED === 'true')
     return (
       <html lang="en" suppressHydrationWarning>
-        <body className="min-h-svh font-sans">
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <body className={cn("fixed inset-0 flex flex-col font-sans antialiased overflow-hidden", fontSans.variable)}>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             {children}
+            <Toaster />
           </ThemeProvider>
         </body>
       </html>

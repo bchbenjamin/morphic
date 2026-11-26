@@ -90,6 +90,8 @@ function getSearchModeSnapshot(): SearchMode {
 }
 
 interface ChatPanelProps {
+  /** Hermes owns inference and tools; keep the original composer but omit unsupported controls. */
+  hermesMode?: boolean
   disabled?: boolean
   isHistoryPending?: boolean
   chatId: string
@@ -125,6 +127,7 @@ interface ChatPanelProps {
 }
 
 export function ChatPanel({
+  hermesMode = false,
   disabled = false,
   isHistoryPending = false,
   chatId,
@@ -194,7 +197,7 @@ export function ChatPanel({
     isGuest,
     isCloudDeployment
   })
-  const adaptiveModeSubmitBlocked = isAdaptiveModeAuthBlocked({
+  const adaptiveModeSubmitBlocked = !hermesMode && isAdaptiveModeAuthBlocked({
     mode: searchMode,
     isGuest,
     isCloudDeployment
@@ -232,8 +235,8 @@ export function ChatPanel({
     inputRef.current?.blur()
     // Reset chatId in parent component
     onNewChat?.()
-    router.push('/')
-  }, [setMessages, closeArtifact, onNewChat, router])
+    if (!hermesMode) router.push('/')
+  }, [setMessages, closeArtifact, onNewChat, router, hermesMode])
 
   // Listen for keyboard shortcut events
   // Uses defaultPrevented to prevent duplicate handling
@@ -779,6 +782,7 @@ export function ChatPanel({
             name="input"
             rows={2}
             maxRows={5}
+            maxLength={hermesMode ? 32000 : undefined}
             tabIndex={0}
             onCompositionStart={handleCompositionStart}
             onCompositionEnd={handleCompositionEnd}
@@ -791,6 +795,7 @@ export function ChatPanel({
             className="resize-none w-full min-h-12 bg-transparent border-0 p-3 md:p-4 text-sm placeholder:text-muted-foreground focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
             onChange={handleInputChange}
             onPaste={e => {
+              if (hermesMode) return
               const text = e.clipboardData.getData('text')
               const trimmed = text.trim()
               // Only when the textarea is empty — a URL pasted mid-sentence
@@ -859,7 +864,7 @@ export function ChatPanel({
           {/* Bottom menu area */}
           <div className="flex items-center justify-between p-2 md:p-3">
             <div className="flex items-center gap-2">
-              {!isGuest && (
+              {!isGuest && !hermesMode && (
                 <div>
                   <input
                     ref={fileInputRef}
@@ -920,10 +925,17 @@ export function ChatPanel({
                   </DropdownMenu>
                 </div>
               )}
-              <SearchModeSelector
-                isAdaptiveAuthRequired={isAdaptiveAuthRequired}
-                onAdaptiveAuthRequired={onAdaptiveModeAuthRequired}
-              />
+              {hermesMode ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-input bg-background px-3 py-1.5 text-xs font-medium">
+                  <span className="size-2 rounded-full bg-orange-500" aria-hidden />
+                  Hermes
+                </span>
+              ) : (
+                <SearchModeSelector
+                  isAdaptiveAuthRequired={isAdaptiveAuthRequired}
+                  onAdaptiveAuthRequired={onAdaptiveModeAuthRequired}
+                />
+              )}
             </div>
             <div className="flex items-center gap-2">
               {!isCloudDeployment && modelSelectorData && (
@@ -954,8 +966,9 @@ export function ChatPanel({
                   !hasAvailableModels
                 }
                 onClick={isLoading ? stop : undefined}
+                aria-label={isLoading ? (hermesMode ? 'Disconnect response' : 'Stop generating') : 'Send message'}
                 title={
-                  hasAvailableModels
+                  isLoading && hermesMode ? 'Disconnect response (backend may continue)' : hasAvailableModels
                     ? undefined
                     : 'No enabled model is available'
                 }
@@ -971,7 +984,7 @@ export function ChatPanel({
         </div>
 
         {/* Action buttons for prompt suggestions */}
-        {messages.length === 0 && (
+        {messages.length === 0 && !hermesMode && (
           <ActionButtons
             onSelectPrompt={message => {
               // Set the input value and submit
